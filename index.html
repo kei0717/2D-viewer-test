@@ -223,6 +223,11 @@
       <div class="choice" id="choiceBlank">
         <div class="txt"><b>透明なキャンバスで作成</b><span>すべて透明な状態から新しく描き始めます。</span></div>
       </div>
+      <div class="choice" id="choiceImportModal">
+        <div class="txt"><b>画像をインポートして作成</b><span>手持ちの画像を選択した解像度に自動でリサイズして読み込みます。</span></div>
+      </div>
+
+      <input type="file" id="modalImportInput" accept="image/png,image/*" style="display:none;">
 
       <div style="margin-top:16px; text-align:right; display:none;" id="cancelModalWrap">
          <button class="reset-btn" id="cancelModalBtn" style="border:none;">キャンセル</button>
@@ -683,7 +688,8 @@ document.getElementById('cancelModalBtn').onclick = ()=>{
   startModal.style.display = 'none';
 };
 
-function finalizeSetup(useTemplate){
+// source: 'template' | 'blank' | 画像のdataURL文字列（インポート用）
+function finalizeSetup(source){
   currentMode = pendingMode;
   currentRes = pendingRes;
   TEX_SIZE = pendingRes;
@@ -713,16 +719,32 @@ function finalizeSetup(useTemplate){
     refreshDisplay();
   }
 
-  if(useTemplate){
+  if(source === 'template'){
     loadImageIntoModel(TEMPLATES[currentMode][TEX_SIZE], afterLoad);
-  } else {
+  } else if(source === 'blank'){
     modelCtx.clearRect(0,0,TEX_SIZE,TEX_SIZE);
     afterLoad();
+  } else {
+    // カスタム画像（dataURL）を選択解像度に自動リサイズして読み込む
+    loadImageIntoModel(source, afterLoad);
   }
 }
 
-document.getElementById('choiceTemplate').onclick = ()=> finalizeSetup(true);
-document.getElementById('choiceBlank').onclick = ()=> finalizeSetup(false);
+
+document.getElementById('choiceTemplate').onclick = ()=> finalizeSetup('template');
+document.getElementById('choiceBlank').onclick = ()=> finalizeSetup('blank');
+
+document.getElementById('choiceImportModal').onclick = ()=>{
+  document.getElementById('modalImportInput').click();
+};
+document.getElementById('modalImportInput').addEventListener('change', e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => finalizeSetup(ev.target.result);
+  reader.readAsDataURL(file);
+  e.target.value = '';
+});
 
 // 起動時にモーダルを表示
 openModalFromStart();
